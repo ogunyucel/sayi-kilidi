@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sayı Kilidi 🔐</title>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        
+        body { 
+            display: flex; justify-content: center; align-items: center; 
+            height: 100vh; margin: 0; 
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); 
+        }
+        
+        .container { 
+            background: rgba(255, 255, 255, 0.95); padding: 30px; border-radius: 20px; 
+            box-shadow: 0 15px 35px rgba(0,0,0,0.3); text-align: center; width: 90%; max-width: 420px; 
+            position: relative; 
+        }
+
+        h1 { color: #2c3e50; margin-bottom: 10px; font-size: 38px; }
+        p { color: #34495e; font-size: 22px; font-weight: 600; margin-bottom: 25px; }
+        
+        /* Yuvarlak Kapatma Butonu */
+        .btn-close {
+            position: absolute; top: 15px; right: 15px; width: 35px; height: 35px;
+            background-color: #ff4d4d; color: white; border: none; border-radius: 50%;
+            cursor: pointer; font-size: 20px; font-weight: bold; display: flex;
+            align-items: center; justify-content: center; transition: 0.3s;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2); padding: 0; line-height: 1; z-index: 100; 
+        }
+        .btn-close:hover { background-color: #ff0000; transform: scale(1.1); }
+        
+        /* Seviye Grid Yapısı */
+        .level-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 10px;}
+        .btn-level { 
+            background-color: #3498db; color: white; padding: 15px 0; font-size: 26px; margin: 0;
+            border: none; border-radius: 10px; cursor: pointer; transition: 0.3s; font-weight: bold;
+        }
+        .btn-level:hover { background-color: #2980b9; transform: translateY(-3px); box-shadow: 0 5px 10px rgba(0,0,0,0.15);}
+        
+        .hidden { display: none !important; }
+
+        /* SKOR TABLOSU */
+        #score-board { 
+            margin-bottom: 20px; margin-top: 35px; background: #f8f9fa; padding: 15px; 
+            padding-right: 50px; border-radius: 15px; display: flex; flex-direction: column;
+            gap: 8px; position: relative; border: 2px solid #ecf0f1;
+            cursor: pointer; transition: background-color 0.2s ease;
+        }
+        #score-board:hover { background-color: #e9ecef; }
+        #score-board:hover .btn-inspect { color: #3498db; }
+        
+        .main-stats { font-size: 18px; font-weight: bold; color: #2c3e50; }
+        .sub-stats { font-size: 15px; font-weight: bold; display: flex; justify-content: center; gap: 8px; align-items: center;}
+        
+        .stat-correct { color: #27ae60; }
+        .stat-wrong { color: #e74c3c; }
+        .stat-divider { color: #bdc3c7; }
+
+        /* İNCELE BUTONU YAZISI */
+        .btn-inspect {
+            position: absolute; top: 50%; right: 10px; transform: translateY(-50%);
+            display: flex; flex-direction: column;
+            align-items: center; font-size: 12px; font-weight: bold; color: #2c3e50; transition: 0.2s; padding: 0;
+        }
+        .btn-inspect span { font-size: 24px; margin-bottom: 2px; }
+
+        /* İNCELEME EKRANI TABLOSU */
+        .table-list {
+            display: flex; justify-content: space-between; gap: 15px;
+            margin-top: 15px; padding: 15px; background: #f8f9fa;
+            border-radius: 15px; border: 2px solid #ecf0f1;
+        }
+        .table-column { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+        .table-row { font-size: 17px; font-weight: bold; padding-bottom: 5px; border-bottom: 1px dashed #ddd; text-align: left; white-space: nowrap; }
+        .row-correct { color: #27ae60; }
+        .row-wrong { color: #e74c3c; }
+        .row-unanswered { color: #7f8c8d; }
+
+        /* YANLIŞLARA ÇALIŞ BUTONU */
+        .btn-mistakes {
+            background-color: #e67e22; color: white; padding: 15px; font-size: 20px;
+            border: none; border-radius: 10px; cursor: pointer; font-weight: bold;
+            width: 100%; margin-top: 15px; transition: 0.3s;
+        }
+        .btn-mistakes:hover { background-color: #d35400; transform: translateY(-2px); box-shadow: 0 4px 10px rgba(230, 126, 34, 0.4); }
+
+        /* SORU VE CEVAP KUTUSU TASARIMI */
+        .question-area {
+            font-size: 45px; font-weight: 900; color: #2c3e50; margin: 15px 0 25px 0; 
+            display: flex; justify-content: center; align-items: center; gap: 10px;
+        }
+
+        .answer-box {
+            display: inline-flex; gap: 8px; border: 3px solid #2c3e50; border-radius: 10px;
+            padding: 5px 15px; align-items: center; height: 65px; background-color: transparent;
+        }
+
+        .digit-slot {
+            width: 35px; height: 45px; border-bottom: 5px solid #2c3e50;
+            font-size: 38px; font-weight: 900; 
+            text-align: center; line-height: 45px; transition: 0.2s;
+        }
+
+        /* YENİ EKLENEN: Soru işareti stili */
+        .digit-slot.question-mark { color: #e74c3c; } /* Kırmızı soru işareti */
+        .digit-slot.filled { color: #f39c12; }        /* Sayı yerleşince SARI */
+        .digit-slot.correct-text { color: #27ae60; }  /* Tamamı doğru bitince YEŞİL */
+        .digit-slot.wrong-text { color: #e74c3c; }    /* Yanlış girilirse KIRMIZI */
+
+        /* BEYAZ DAİRE VE SAYILAR */
+        .white-circle {
+            position: relative; width: 240px; height: 240px; background-color: #ffffff;
+            border-radius: 50%; margin: 0 auto 10px auto; display: flex;
+            justify-content: center; align-items: center;
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.05), 0 8px 20px rgba(0,0,0,0.1);
+            border: 3px solid #ecf0f1;
+        }
+
+        .num-node {
+            position: absolute; width: 60px; height: 60px; background: #f1f2f6;
+            color: #2c3e50; border-radius: 50%; display: flex; justify-content: center;
+            align-items: center; font-weight: 900; font-size: 1.8rem; cursor: pointer;
+            transition: all 0.2s ease; transform: translate(-50%, -50%);
+            border: 2px solid #ced4da; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            user-select: none;
+        }
+
+        .num-node:hover {
+            transform: translate(-50%, -50%) scale(1.1);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+            background: #e2e6ea;
+        }
+
+        .num-node.selected {
+            background: #f39c12 !important; color: white !important; border-color: #f1c40f !important;
+            transform: translate(-50%, -50%) scale(1.15); box-shadow: 0 0 15px rgba(243, 156, 18, 0.6);
+            pointer-events: none;
+        }
+
+        .num-node.correct-selection {
+            background: #27ae60 !important; color: white !important; border-color: #2ecc71 !important;
+            transform: translate(-50%, -50%) scale(1.15); box-shadow: 0 0 15px rgba(39, 174, 96, 0.6);
+            pointer-events: none; 
+        }
+
+        .num-node.wrong-selection {
+            background: #e74c3c !important; color: white !important; border-color: #c0392b !important;
+            transform: translate(-50%, -50%) scale(1.15); box-shadow: 0 0 15px rgba(231, 76, 60, 0.6);
+            pointer-events: none;
+        }
+
+        #message { height: 30px; font-weight: bold; margin-top: 15px; font-size: 20px; transition: 0.3s; color: #34495e; display: flex; justify-content: center; align-items: center; }
+
+    </style>
+</head>
+<body>
+
+<div id="level-screen" class="container">
+    <h1>Sayı Kilidi 🔐</h1>
+    <p>Seviyeni seç ve oyuna başla!</p>
+    <div class="level-grid" id="levels"></div>
+</div>
+
+<div id="game-screen" class="container hidden">
+    <button class="btn-close" onclick="endGame()">×</button>
+    
+    <div id="score-board" onclick="openInspectScreen()">
+        <div class="main-stats">Skor: <span id="score-display">0</span> | Seviye: <span id="level-display">6</span><span id="level-suffix">'lar</span></div>
+        <div class="sub-stats">
+            <span class="stat-correct">✔ Doğru: <span id="count-correct">0</span></span>
+            <span class="stat-divider">|</span>
+            <span class="stat-wrong">✖ Yanlış: <span id="count-wrong">0</span></span>
+        </div>
+        <div class="btn-inspect">
+            <span>🔍</span>
+            İncele
+        </div>
+    </div>
+
+    <div class="question-area" id="question-area"></div>
+
+    <div class="white-circle" id="circle-container"></div>
+
+    <p id="message">Rakamları sırayla seç!</p>
+</div>
+
+<div id="inspect-screen" class="container hidden">
+    <button class="btn-close" onclick="closeInspectScreen()">×</button>
+    
+    <div id="score-board" style="padding-right: 15px; cursor: default;">
+        <div class="main-stats">Skor: <span id="insp-score">0</span></div>
+        <div class="sub-stats">
+            <span class="stat-correct">✔ Doğru: <span id="insp-correct">0</span></span>
+            <span class="stat-divider">|</span>
+            <span class="stat-wrong">✖ Yanlış: <span id="insp-wrong">0</span></span>
+        </div>
+    </div>
+
+    <h2 style="color: #2c3e50; margin: 10px 0;"><span id="insp-level-title">6</span><span id="insp-level-suffix">'lar</span> Çarpım Tablosu</h2>
+    
+    <div id="table-list" class="table-list"></div>
+
+    <button class="btn-mistakes" onclick="startMistakeMode()">Sadece Yanlışlara Çalış</button>
+</div>
+
+<script>
+    let currentLevel = 1;      
+    let currentMultiplier = 1; 
+    let answerString = "";      
+    let currentAnswerIndex = 0; 
+
+    let selectedNodes = [];
+    let currentAttempt = "";
+
+    let isChecking = false; 
+
+    let score = 0;
+    let correctCount = 0;
+    let wrongCount = 0;
+    let historyData = {}; 
+
+    let isMistakeMode = false;
+    let mistakeQueue = [];
+    let fixedMistakesThisSession = 0; 
+
+    function showScreen(screenId) {
+        document.getElementById('level-screen').classList.add('hidden');
+        document.getElementById('game-screen').classList.add('hidden');
+        document.getElementById('inspect-screen').classList.add('hidden');
+        document.getElementById(screenId).classList.remove('hidden');
+    }
+
+    function generateLevelButtons() {
+        const levelsDiv = document.getElementById('levels');
+        levelsDiv.innerHTML = ""; 
+        for (let i = 1; i <= 9; i++) {
+            let btn = document.createElement('button');
+            btn.innerText = i;
+            btn.className = "btn-level";
+            btn.onclick = () => startLevel(i);
+            levelsDiv.appendChild(btn);
+        }
+    }
+    
+    window.onload = generateLevelButtons;
+
+    function startLevel(level) {
+        currentLevel = level;
+        document.getElementById('level-display').innerText = level;
+        
+        let suffix = [1, 2, 3, 4, 5, 7, 8].includes(level) ? "'ler" : "'lar";
+        document.getElementById('level-suffix').innerText = suffix;
+        
+        isMistakeMode = false;
+        mistakeQueue = [];
+        score = 0;
+        correctCount = 0;
+        wrongCount = 0;
+        historyData = {}; 
+        updateScoreBoard();
+
+        showScreen('game-screen');
+        generateQuestion();
+    }
+
+    function updateScoreBoard() {
+        document.getElementById('score-display').innerText = score;
+        document.getElementById('count-correct').innerText = correctCount;
+        document.getElementById('count-wrong').innerText = wrongCount;
+    }
+
+    function generateQuestion() {
+        document.getElementById('message').innerText = "Rakamları sırayla seç!";
+        document.getElementById('message').style.color = "#34495e";
+        
+        isChecking = false;
+        currentAnswerIndex = 0; 
+        currentAttempt = "";
+        selectedNodes = [];
+
+        if (isMistakeMode) {
+            const randomIndex = Math.floor(Math.random() * mistakeQueue.length);
+            currentMultiplier = mistakeQueue[randomIndex];
+        } else {
+            currentMultiplier = Math.floor(Math.random() * 10) + 1; 
+        }
+
+        const targetResult = currentLevel * currentMultiplier; 
+        answerString = targetResult.toString();
+
+        // 1. Soru Alanını ve Boş Kutuları Oluşturma
+        const questionArea = document.getElementById('question-area');
+        let htmlStr = `<span>${currentLevel} x ${currentMultiplier} = </span>`;
+        
+        let boxHtml = `<div class="answer-box">`;
+        for(let i=0; i < answerString.length; i++) {
+            // GÜNCELLEME: Sadece ilk kutuya (i===0) başlangıçta soru işareti ekliyoruz
+            let content = (i === 0) ? "?" : "";
+            let extraClass = (i === 0) ? " question-mark" : "";
+            boxHtml += `<div class="digit-slot${extraClass}" id="digit-box-${i}">${content}</div>`;
+        }
+        boxHtml += `</div>`;
+        
+        questionArea.innerHTML = htmlStr + boxHtml;
+
+        // 2. Daire İçindeki Dört Sayıyı Üretme
+        const container = document.getElementById('circle-container');
+        container.innerHTML = ""; 
+
+        let circleNums = answerString.split(''); 
+
+        let attempt = 0;
+        while(circleNums.length < 4 && attempt < 100) {
+            let rnd = Math.floor(Math.random() * 10).toString(); 
+            if (!circleNums.includes(rnd)) {
+                circleNums.push(rnd);
+            }
+            attempt++;
+        }
+
+        circleNums.sort(() => Math.random() - 0.5);
+        const radius = 90; 
+
+        circleNums.forEach((numStr, i) => {
+            const btn = document.createElement('div');
+            btn.className = 'num-node';
+            btn.innerText = numStr;
+
+            const angle = (i * Math.PI / 2) - (Math.PI / 4); 
+            const x = 120 + radius * Math.cos(angle);
+            const y = 120 + radius * Math.sin(angle);
+
+            btn.style.left = `${x}px`;
+            btn.style.top = `${y}px`;
+
+            btn.onclick = () => handleNodeClick(numStr, btn);
+            container.appendChild(btn);
+        });
+    }
+
+    function handleNodeClick(clickedValue, btnElement) {
+        if (isChecking) return;
+
+        let expectedDigit = answerString[currentAnswerIndex];
+
+        if (clickedValue === expectedDigit) {
+            // DOĞRU RAKAMA TIKLADI (SARI YAP)
+            btnElement.classList.add('selected');
+            selectedNodes.push(btnElement);
+
+            let slot = document.getElementById(`digit-box-${currentAnswerIndex}`);
+            slot.innerText = clickedValue;
+            slot.classList.remove('question-mark');
+            slot.classList.add('filled');
+            
+            currentAttempt += clickedValue;
+            currentAnswerIndex++;
+
+            // Bir sonraki kutuya geçilecekse, o kutuya Kırmızı Soru İşareti (?) koy
+            if (currentAnswerIndex < answerString.length) {
+                let nextSlot = document.getElementById(`digit-box-${currentAnswerIndex}`);
+                nextSlot.innerText = "?";
+                nextSlot.classList.add("question-mark");
+            }
+
+            // Tamamlandıysa kontrol et
+            if (currentAnswerIndex === answerString.length) {
+                checkAnswerFinal(true);
+            }
+
+        } else {
+            // YANLIŞ RAKAMA TIKLADIĞI AN DİREKT HATA SAYILIR
+            btnElement.classList.add('wrong-selection');
+            
+            // Yanlış seçtiği rakamı da kutuya KIRMIZI olarak gösterelim
+            let slot = document.getElementById(`digit-box-${currentAnswerIndex}`);
+            slot.innerText = clickedValue;
+            slot.classList.remove('question-mark');
+            slot.classList.add('wrong-text');
+
+            checkAnswerFinal(false);
+        }
+    }
+
+    function checkAnswerFinal(isCorrect) {
+        isChecking = true; 
+        const msgBox = document.getElementById('message');
+
+        if (isCorrect) {
+            // Butonları ve Kutucukları YEŞİL yap
+            selectedNodes.forEach(node => {
+                node.classList.remove('selected');
+                node.classList.add('correct-selection');
+            });
+            for(let i=0; i < answerString.length; i++) {
+                let slot = document.getElementById(`digit-box-${i}`);
+                slot.classList.remove('filled');
+                slot.classList.add('correct-text');
+            }
+
+            msgBox.innerText = "Mükemmel! 🎉";
+            msgBox.style.color = "#27ae60";
+            score += 10;
+            correctCount++; 
+            updateScoreBoard();
+            historyData[currentMultiplier] = 'correct';
+
+            if (isMistakeMode) {
+                mistakeQueue = mistakeQueue.filter(m => m !== currentMultiplier);
+                fixedMistakesThisSession++; 
+                
+                if (mistakeQueue.length === 0) {
+                    setTimeout(() => {
+                        alert("Tebrikler! Tüm yanlışlarını öğrendin. 🎉");
+                        isMistakeMode = false;
+                        generateQuestion(); 
+                        openInspectScreen(); 
+                    }, 1000);
+                    return; 
+                }
+            }
+            setTimeout(() => { generateQuestion(); }, 1000); 
+
+        } else {
+            // Seçili olan doğru butonları iptal edip, Yanlış seçilen butonu KIRMIZI yapmıştık
+            // Önceden doğru girilen (sarı) rakamlar varsa onları da kırmızı yapabiliriz (opsiyonel)
+            for(let i=0; i < answerString.length; i++) {
+                let slot = document.getElementById(`digit-box-${i}`);
+                if (slot.classList.contains('filled')) {
+                    slot.classList.remove('filled');
+                    slot.classList.add('wrong-text');
+                }
+            }
+
+            msgBox.innerText = `Maalesef yanlış, tekrar dene!`;
+            msgBox.style.color = "#c0392b";
+            wrongCount++; 
+            updateScoreBoard();
+            historyData[currentMultiplier] = 'wrong';
+
+            setTimeout(() => { generateQuestion(); }, 1500); 
+        }
+    }
+
+    function endGame() {
+        if (isMistakeMode) {
+            alert(`Tebrikler! ${fixedMistakesThisSession} tane yanlış düzelttiniz.\nKalan düzeltilmesi gereken yanlış sayısı: ${mistakeQueue.length}`);
+            isMistakeMode = false;
+            openInspectScreen(); 
+        } else {
+            if(confirm("Oyunu bitirmek ve seviye seçimine dönmek istiyor musun?")) {
+                showScreen('level-screen'); 
+            }
+        }
+    }
+
+    function openInspectScreen() {
+        showScreen('inspect-screen');
+        
+        document.getElementById('insp-score').innerText = score;
+        document.getElementById('insp-correct').innerText = correctCount;
+        document.getElementById('insp-wrong').innerText = wrongCount;
+        document.getElementById('insp-level-title').innerText = currentLevel;
+        
+        let suffix = [1, 2, 3, 4, 5, 7, 8].includes(currentLevel) ? "'ler" : "'lar";
+        document.getElementById('insp-level-suffix').innerText = suffix;
+
+        const listDiv = document.getElementById('table-list');
+        listDiv.innerHTML = "";
+
+        let col1 = document.createElement('div');
+        col1.className = "table-column";
+        let col2 = document.createElement('div');
+        col2.className = "table-column";
+
+        for(let i = 1; i <= 10; i++) {
+            let div = document.createElement('div');
+            div.className = "table-row";
+            
+            let statusHTML = "";
+            let rowClass = "row-unanswered";
+
+            if (historyData[i] === 'correct') {
+                statusHTML = "✔ ";
+                rowClass = "row-correct";
+            } else if (historyData[i] === 'wrong') {
+                statusHTML = "✖ ";
+                rowClass = "row-wrong";
+            } else {
+                statusHTML = "<span style='opacity:0;'>✔ </span>"; 
+            }
+
+            div.innerHTML = `<span class="${rowClass}">${statusHTML} ${currentLevel} x ${i} = ${currentLevel * i}</span>`;
+            
+            if (i <= 5) {
+                col1.appendChild(div);
+            } else {
+                col2.appendChild(div);
+            }
+        }
+        
+        listDiv.appendChild(col1);
+        listDiv.appendChild(col2);
+    }
+
+    function closeInspectScreen() {
+        showScreen('game-screen');
+    }
+
+    function startMistakeMode() {
+        mistakeQueue = [];
+        for (let i = 1; i <= 10; i++) {
+            if (historyData[i] === 'wrong') {
+                mistakeQueue.push(i);
+            }
+        }
+
+        if (mistakeQueue.length === 0) {
+            alert("Harika! Hiç yanlışınız yok.");
+            return;
+        }
+
+        fixedMistakesThisSession = 0; 
+        isMistakeMode = true;
+        showScreen('game-screen');
+        generateQuestion();
+    }
+</script>
+</body>
+</html>
